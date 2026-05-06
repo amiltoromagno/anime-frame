@@ -198,8 +198,12 @@ const filteredEntries = computed(() => {
     if (activeTab.value !== 'all') {
       all = all.filter(e => e.list_status.status === activeTab.value)
     }
-    // Apply search
-    return all.filter(e => e.node.title.toLowerCase().includes(q))
+    // Apply search (match both romaji and english titles)
+    return all.filter(e => {
+      const romaji = e.node.title.toLowerCase()
+      const english = e.node.alternative_titles?.en?.toLowerCase() || ''
+      return romaji.includes(q) || english.includes(q)
+    })
   }
 
   // No search: use paginated results

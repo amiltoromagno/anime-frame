@@ -63,7 +63,7 @@
             <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-primary" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            <span class="text-3xl font-extrabold text-gradient">Anime Frame</span>
+            <span class="text-3xl font-extrabold text-primary">Anime Frame</span>
           </NuxtLink>
           <h1 class="text-2xl font-bold mb-2">Welcome back!</h1>
           <p class="text-base-content/60 text-sm">Sign in to continue tracking your anime</p>

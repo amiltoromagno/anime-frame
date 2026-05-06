@@ -4,6 +4,25 @@
   themes: dark --default, light;
 }
 
+/* Sakura Pink Theme Overrides */
+[data-theme="dark"] {
+  --color-primary: oklch(70% 0.22 350);
+  --color-primary-content: oklch(15% 0.04 350);
+  --color-secondary: oklch(62% 0.18 15);
+  --color-secondary-content: oklch(14% 0.03 15);
+  --color-accent: oklch(72% 0.14 190);
+  --color-accent-content: oklch(16% 0.02 190);
+}
+
+[data-theme="light"] {
+  --color-primary: oklch(50% 0.24 350);
+  --color-primary-content: oklch(96% 0.02 350);
+  --color-secondary: oklch(46% 0.20 15);
+  --color-secondary-content: oklch(96% 0.02 15);
+  --color-accent: oklch(58% 0.16 190);
+  --color-accent-content: oklch(96% 0.02 190);
+}
+
 /* ========================================
    Base Styles
    ======================================== */

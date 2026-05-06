@@ -22,7 +22,7 @@
           <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-primary" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          <span class="text-gradient hidden sm:inline">Anime Frame</span>
+          <span class="text-primary hidden sm:inline">Anime Frame</span>
         </NuxtLink>
       </div>
 
@@ -140,8 +140,7 @@
     <!-- Footer -->
     <footer class="footer footer-center bg-base-200 text-base-content p-6 border-t border-base-content/5">
       <aside>
-        <p class="text-sm opacity-70">
-          Built with ❤️ using Nuxt, Tailwind & daisyUI — Powered by
+        <p class="text-sm opacity-70">Powered by
           <a href="https://jikan.moe/" target="_blank" class="link link-primary">Jikan API</a>
         </p>
       </aside>

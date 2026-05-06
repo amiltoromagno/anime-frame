@@ -20,7 +20,7 @@
           :to="`/anime/${entry.node.id}`"
           class="font-semibold text-sm line-clamp-1 hover:text-primary transition-colors"
         >
-          {{ entry.node.title }}
+          {{ displayTitle }}
         </NuxtLink>
         <div class="flex items-center gap-2 mt-0.5">
           <span class="badge badge-xs" :class="statusBadgeClass">{{ statusLabel }}</span>
@@ -118,6 +118,7 @@
 
 <script setup lang="ts">
 import type { MalListEntry, MalAnimeStatus } from '~/composables/useMalApi'
+import { useTitlePreference } from '~/composables/useTitlePreference'
 
 const props = defineProps<{
   entry: MalListEntry
@@ -129,6 +130,15 @@ const emit = defineEmits<{
 
 const { updateAnimeListStatus, deleteAnimeListStatus } = useMalApi()
 const { updateEntry, removeEntry } = useUserAnimeList()
+const { titlePref } = useTitlePreference()
+
+const displayTitle = computed(() => {
+  const node = props.entry.node
+  if (titlePref.value === 'english' && node.alternative_titles?.en) {
+    return node.alternative_titles.en
+  }
+  return node.title
+})
 
 // ── Computed ────────────────────────────────────────────────
 
