@@ -1,0 +1,5 @@
+name = "anime-frame"
+compatibility_date = "2026-05-06"
+pages_build_output_dir = ".output/public"
+
+compatibility_flags = ["nodejs_compat"]
