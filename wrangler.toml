@@ -3,3 +3,7 @@ compatibility_date = "2026-05-06"
 pages_build_output_dir = "dist"
 
 compatibility_flags = ["nodejs_compat"]
+
+[vars]
+NUXT_PUBLIC_MAL_CLIENT_ID = "4cd75c495237fafcb7a1865c20995292"
+NUXT_PUBLIC_MAL_REDIRECT_URI = "https://anime-frame.pages.dev/auth/callback"
