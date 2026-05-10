@@ -14,7 +14,7 @@
     <div class="relative max-w-7xl mx-auto px-6 pt-8 pb-0">
       <div class="flex flex-col md:flex-row gap-6 items-center">
         <!-- Poster -->
-        <div class="shrink-0 -mb-12 md:-mb-16 z-10">
+        <div class="shrink-0 -mb-0 md:-mb-16 z-10">
           <div class="w-36 md:w-44 rounded-xl overflow-hidden shadow-2xl border border-base-content/10">
             <img
               :src="anime.images?.jpg?.large_image_url"
@@ -25,9 +25,9 @@
         </div>
 
         <!-- Title & meta -->
-        <div class="flex-1 min-w-0">
+        <div class="flex-1 min-w-0 text-center md:text-left">
           <!-- Score + rank row -->
-          <div class="flex items-center gap-3 mb-2 flex-wrap">
+          <div class="flex items-center justify-center md:justify-start gap-3 mb-2 flex-wrap">
             <!-- MAL stats group -->
             <div
               v-if="anime.score || anime.rank || anime.popularity"
@@ -77,7 +77,7 @@
           </p>
 
           <!-- Meta pills -->
-          <div class="flex flex-wrap gap-2 mt-3 text-sm text-base-content/70">
+          <div class="flex flex-wrap justify-center md:justify-start gap-2 mt-3 text-sm text-base-content/70">
             <span v-if="anime.type" class="inline-flex items-center gap-1"><span class="font-semibold text-base-content">{{ anime.type }}</span></span>
             <span v-if="anime.type && anime.episodes" class="opacity-40">·</span>
             <span v-if="anime.episodes">{{ anime.episodes }} eps</span>
