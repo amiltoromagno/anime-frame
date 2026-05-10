@@ -50,10 +50,10 @@
               </div>
               <!-- MAL attribution pill -->
               <a
-                href="https://myanimelist.net"
+                :href="`https://myanimelist.net/anime/${anime.mal_id}`"
                 target="_blank"
                 class="flex items-center px-2 bg-base-content/5 border-l border-base-content/10 hover:bg-base-content/10 transition-colors"
-                title="Stats sourced from MyAnimeList"
+                title="View on MyAnimeList"
               >
                 <span class="text-[10px] font-bold tracking-widest text-base-content/40 uppercase">MAL</span>
               </a>
@@ -66,7 +66,7 @@
           </div>
 
           <!-- Title -->
-          <h1 class="text-2xl md:text-3xl font-bold leading-tight text-base-content truncate">
+          <h1 class="text-2xl md:text-3xl font-bold leading-tight text-base-content break-words">
             {{ displayTitle(anime) }}
           </h1>
           <p v-if="oppositeTitle" class="text-base text-base-content/50 mt-0.5">

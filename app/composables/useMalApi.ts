@@ -171,6 +171,8 @@ export const useMalApi = () => {
 
     query.set('fields', params?.fields || 'list_status,alternative_titles,mean,rank,media_type,status,num_episodes,genres')
 
+    query.set('nsfw', 'true')
+
     if (params?.status) query.set('status', params.status)
     if (params?.sort) query.set('sort', params.sort)
     if (params?.limit) query.set('limit', String(params.limit))

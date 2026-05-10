@@ -60,7 +60,7 @@
           <span
             v-for="genre in anime.genres?.slice(0, 3)"
             :key="genre.mal_id"
-            class="badge badge-xs badge-outline badge-primary"
+            class="badge badge-xs bg-white/90 text-black font-medium"
           >
             {{ genre.name }}
           </span>

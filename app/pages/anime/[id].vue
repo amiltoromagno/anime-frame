@@ -104,7 +104,7 @@
 
             <!-- Recommendations -->
             <AnimeDetailRecommendations
-              v-if="recommendations.length"
+              v-if="recommendations?.length"
               :recommendations="recommendations"
             />
           </main>
@@ -137,16 +137,23 @@ onMounted(async () => {
   }
 
   try {
-    // Fetch main details first (needed for the page title), then the rest in parallel
+    // Fetch main details first (required for the page)
     anime.value = await getAnimeFullById(id)
 
-    // Fetch supporting data with staggering to respect rate limits
-    const [chars, recs] = await Promise.all([
+    // Fetch supporting data independently — don't fail the page if one breaks
+    const [chars, recs] = await Promise.allSettled([
       getAnimeCharacters(id),
       getAnimeRecommendations(id),
     ])
-    characters.value = chars
-    recommendations.value = recs
+    characters.value = chars.status === 'fulfilled' ? chars.value : []
+    recommendations.value = recs.status === 'fulfilled' ? recs.value : []
+
+    if (recs.status === 'rejected') {
+      console.warn('Failed to load recommendations:', recs.reason)
+    }
+    if (chars.status === 'rejected') {
+      console.warn('Failed to load characters:', chars.reason)
+    }
   } catch (e: any) {
     if (e.message?.includes('404')) {
       error.value = 'This anime could not be found. It may not exist or the ID is incorrect.'

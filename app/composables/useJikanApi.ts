@@ -165,6 +165,10 @@ const MIN_INTERVAL = 1100
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const rateLimitedFetch = async (url: string, retries = 3): Promise<any> => {
+  // Append sfw=false to include adult/+18 anime titles
+  const separator = url.includes('?') ? '&' : '?'
+  const fullUrl = `${url}${separator}sfw=false`
+
   const now = Date.now()
   const timeSinceLastRequest = now - lastRequestTime
   if (timeSinceLastRequest < MIN_INTERVAL) {
@@ -172,7 +176,7 @@ const rateLimitedFetch = async (url: string, retries = 3): Promise<any> => {
   }
   lastRequestTime = Date.now()
 
-  const response = await fetch(url)
+  const response = await fetch(fullUrl)
 
   // Retry on rate limit (429)
   if (response.status === 429 && retries > 0) {

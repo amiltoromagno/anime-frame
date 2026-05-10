@@ -2,7 +2,7 @@
   <div class="min-h-screen bg-base-100 pb-20">
 
     <!-- ─── Timeline Season Selector ─────────────────────────────── -->
-    <div class="bg-base-200 border-b border-base-content/5 py-6 overflow-hidden">
+    <div class="bg-base-200 border-b border-base-content/5 py-6">
       <div
         ref="timelineEl"
         class="flex items-end gap-0 overflow-x-auto scrollbar-none px-6 select-none cursor-grab active:cursor-grabbing"
@@ -25,27 +25,27 @@
 
           <!-- Season node -->
           <button
-            class="shrink-0 flex flex-col items-center gap-1.5 px-3 pb-1 transition-all duration-200 group relative"
+            class="shrink-0 flex flex-col items-center gap-1.5 px-3 py-1 transition-all duration-200 group relative overflow-visible"
             :class="isSelected(entry) ? 'cursor-default' : 'hover:opacity-80 cursor-pointer'"
             @click="selectSeason(entry)"
             :data-selected="isSelected(entry) ? true : undefined"
           >
             <!-- Dot -->
             <div
-              class="rounded-full transition-all duration-300"
+              class="rounded-full transition-all duration-300 w-2 h-2"
               :class="[
                 isSelected(entry)
-                  ? 'w-3.5 h-3.5 bg-primary ring-4 ring-primary/20 shadow-lg shadow-primary/40'
-                  : 'w-2 h-2 bg-base-content/20 group-hover:bg-base-content/40'
+                  ? 'bg-primary ring-4 ring-primary/20 shadow-lg shadow-primary/40'
+                  : 'bg-base-content/20 group-hover:bg-base-content/40'
               ]"
             />
             <!-- Season name -->
             <span
-              class="capitalize transition-all duration-300 whitespace-nowrap"
+              class="capitalize transition-all duration-300 whitespace-nowrap text-xs font-medium"
               :class="[
                 isSelected(entry)
-                  ? 'text-primary font-bold text-base'
-                  : 'text-base-content/40 text-xs font-medium group-hover:text-base-content/70'
+                  ? 'text-primary font-bold'
+                  : 'text-base-content/40 group-hover:text-base-content/70'
               ]"
             >
               {{ entry.season }}

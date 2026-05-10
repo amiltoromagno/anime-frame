@@ -152,6 +152,8 @@ const hasNextPage = ref(false)
 const nextOffset = ref(0)
 const sortBy = ref<string>('list_updated_at')
 const searchQuery = ref('')
+const debouncedSearch = ref('')
+let debounceTimer: ReturnType<typeof setTimeout> | null = null
 const totalCount = ref(0)
 const cardRefs = ref<Record<number, any>>({})
 
@@ -185,10 +187,18 @@ const totalDays = computed(() => {
   return days > 0 ? `${days}d` : '—'
 })
 
+// ── Debounced search ─────────────────────────────────────────
+watch(searchQuery, (newVal) => {
+  if (debounceTimer) clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => {
+    debouncedSearch.value = newVal
+  }, 300)
+})
+
 // ── Client-side filtering by search (uses full cached list) ─
 
 const filteredEntries = computed(() => {
-  const q = searchQuery.value.toLowerCase().trim()
+  const q = debouncedSearch.value.toLowerCase().trim()
 
   // If searching, use the full cached list (ignores pagination)
   if (q) {
