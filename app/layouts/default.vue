@@ -4,19 +4,19 @@
     <header class="navbar bg-base-100/80 backdrop-blur-lg border-b border-base-content/5 sticky top-0 z-50">
       <div class="navbar-start">
         <!-- Mobile menu -->
-        <div class="dropdown">
-          <div tabindex="0" role="button" class="btn btn-ghost lg:hidden">
+        <details class="dropdown lg:hidden" ref="mobileMenuRef">
+          <summary class="btn btn-ghost">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16" />
             </svg>
-          </div>
-          <ul tabindex="0" class="menu menu-sm dropdown-content bg-base-200 rounded-box z-10 mt-3 w-52 p-2 shadow-lg">
+          </summary>
+          <ul class="menu menu-sm dropdown-content bg-base-200 rounded-box z-10 mt-3 w-52 p-2 shadow-lg">
             <li><NuxtLink to="/" class="font-medium">Home</NuxtLink></li>
             <li><NuxtLink to="/browse" class="font-medium">Browse</NuxtLink></li>
             <li><NuxtLink to="/seasonal" class="font-medium">Seasonal</NuxtLink></li>
             <li v-if="isAuthenticated"><NuxtLink to="/mylist" class="font-medium">My List</NuxtLink></li>
           </ul>
-        </div>
+        </details>
         <!-- Logo -->
         <NuxtLink to="/" class="btn btn-ghost text-xl gap-2 font-bold">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-primary" viewBox="0 0 24 24" fill="currentColor">
@@ -153,6 +153,16 @@ const { toggleTheme, initTheme, isDark } = useTheme()
 const { titlePref, toggleTitlePref } = useTitlePreference()
 const { isAuthenticated, user, authLoading, initAuth, logout } = useAuth()
 const { fetchFullList } = useUserAnimeList()
+
+const router = useRouter()
+const mobileMenuRef = ref<HTMLDetailsElement | null>(null)
+
+// Close the mobile dropdown menu after every navigation
+router.afterEach(() => {
+  if (mobileMenuRef.value) {
+    mobileMenuRef.value.open = false
+  }
+})
 
 onMounted(async () => {
   initTheme()

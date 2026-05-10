@@ -28,7 +28,7 @@
             class="shrink-0 flex flex-col items-center gap-1.5 px-3 pb-1 transition-all duration-200 group relative"
             :class="isSelected(entry) ? 'cursor-default' : 'hover:opacity-80 cursor-pointer'"
             @click="selectSeason(entry)"
-            :ref="isSelected(entry) ? 'selectedNode' : undefined"
+            :data-selected="isSelected(entry) ? true : undefined"
           >
             <!-- Dot -->
             <div
@@ -149,15 +149,15 @@ const seasonEmoji = (s: string) =>
 
 // ── Timeline scroll ───────────────────────────────────────────────
 const timelineEl = ref<HTMLElement | null>(null)
-const selectedNode = ref<HTMLElement | null>(null)
 
 function scrollToSelected() {
   nextTick(() => {
-    const node = (selectedNode.value as any)?.[0] ?? selectedNode.value
-    if (node && timelineEl.value) {
-      const container = timelineEl.value
-      const nodeLeft = (node as HTMLElement).offsetLeft
-      const nodeWidth = (node as HTMLElement).offsetWidth
+    if (!timelineEl.value) return
+    const container = timelineEl.value
+    const node = container.querySelector<HTMLElement>('[data-selected]')
+    if (node) {
+      const nodeLeft = node.offsetLeft
+      const nodeWidth = node.offsetWidth
       const center = nodeLeft - container.offsetWidth / 2 + nodeWidth / 2
       container.scrollTo({ left: center, behavior: 'smooth' })
     }
@@ -279,7 +279,7 @@ onMounted(async () => {
     const currYear = new Date().getFullYear()
     const currSeason = currentSeasonName()
 
-    if (entries.length) {
+    if (timeline.value.length) {
       // Find the actual current season in the timeline
       const currentEntryIndex = entries.findIndex(e => e.year === currYear && e.season === currSeason)
       

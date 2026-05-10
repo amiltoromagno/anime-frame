@@ -35,9 +35,9 @@
         <div
           v-for="rel in anime.relations"
           :key="rel.relation"
-          class="flex flex-wrap gap-x-4 gap-y-1 items-baseline"
+          class="grid grid-cols-[7rem_1fr] gap-x-4 gap-y-1"
         >
-          <span class="text-xs font-bold text-base-content/50 uppercase tracking-wide w-28 shrink-0">{{ rel.relation }}</span>
+          <span class="text-xs font-bold text-base-content/50 uppercase tracking-wide">{{ rel.relation }}</span>
           <div class="flex flex-wrap gap-1.5">
             <NuxtLink
               v-for="entry in rel.entry"
