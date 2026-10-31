@@ -4,7 +4,7 @@
     <!-- Active Filters Badges / Count -->
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div class="text-sm text-base-content/60">
-        <span v-if="loading && results.length === 0" class="animate-pulse">Searching...</span>
+        <span v-if="loading && results.length === 0" class="animate-pulse">Loading...</span>
         <span v-else-if="results.length > 0">Showing results</span>
         <span v-else>No results found</span>
       </div>
@@ -13,17 +13,17 @@
     <!-- Empty State -->
     <div v-if="!loading && results.length === 0" class="py-24 text-center">
       <div class="text-6xl mb-4">🔍</div>
-      <h3 class="text-xl font-bold mb-2">No anime matched your filters</h3>
-      <p class="text-base-content/60 max-w-sm mx-auto">Try broadening your search or unchecking some genres to find what you're looking for.</p>
+      <h3 class="text-xl font-bold mb-2">No anime found</h3>
+      <p class="text-base-content/60 max-w-sm mx-auto">Try a different search term, or pick another ranking.</p>
     </div>
 
     <!-- Results Grid -->
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
       <AnimeCard
         v-for="anime in results"
-        :key="anime.mal_id"
+        :key="anime.id"
         :anime="anime"
-        :list-status="getListStatus(anime.mal_id)"
+        :list-status="getListStatus(anime.id)"
       />
       
       <!-- Skeletons (tail end) -->
@@ -49,11 +49,11 @@
 </template>
 
 <script setup lang="ts">
-import type { JikanAnime } from '~/composables/useJikanApi'
+import type { AnimeNode } from '~/utils/anime'
 import type { MalAnimeStatus } from '~/composables/useMalApi'
 
 const props = defineProps<{
-  results: JikanAnime[]
+  results: AnimeNode[]
   loading: boolean
   hasNextPage: boolean
   listStatusMap?: Record<number, MalAnimeStatus>

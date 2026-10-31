@@ -74,7 +74,7 @@ export const useUserAnimeList = () => {
       const { getAnimeListStatus } = useMalApi()
       const status = await getAnimeListStatus(malId)
       if (status) {
-        // We need the basic anime info too; fetch from Jikan or store minimal
+        // We need the basic anime info too, so pull the fresh entry below.
         // For now, we'll just fetch the full list again for this entry
         await refreshSingleEntry(malId)
       }
@@ -92,11 +92,10 @@ export const useUserAnimeList = () => {
       const { getAnimeListStatus } = useMalApi()
       const status = await getAnimeListStatus(malId)
       if (status) {
-        // We have the status but need the node — fetch anime info from Jikan for basic data
-        // and combine. For simplicity, we flag the entry as partially loaded.
-        const { useJikanApi } = await import('./useJikanApi')
-        const jikan = useJikanApi()
-        const anime = await jikan.getAnimeById(malId)
+        // We have the status but need the node — pull the anime's basic info
+        // from the catalog API and combine them.
+        const { getAnime } = useCatalogApi()
+        const anime = await getAnime(malId)
 
         cache.value = {
           ...cache.value,
@@ -104,18 +103,14 @@ export const useUserAnimeList = () => {
             node: {
               id: malId,
               title: anime.title,
-              main_picture: anime.images?.jpg
-                ? {
-                    medium: anime.images.jpg.image_url,
-                    large: anime.images.jpg.large_image_url,
-                  }
-                : null,
-              num_episodes: anime.episodes ?? undefined,
-              media_type: anime.type ?? undefined,
-              status: anime.status ?? undefined,
-              mean: anime.score ?? undefined,
-              rank: anime.rank ?? undefined,
-              genres: anime.genres?.map((g) => ({ id: g.mal_id, name: g.name })),
+              main_picture: anime.main_picture ?? null,
+              alternative_titles: anime.alternative_titles,
+              num_episodes: anime.num_episodes || undefined,
+              media_type: anime.media_type,
+              status: anime.status,
+              mean: anime.mean,
+              rank: anime.rank,
+              genres: anime.genres,
             },
             list_status: status,
           },

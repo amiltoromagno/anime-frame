@@ -4,177 +4,230 @@
     <div class="bg-base-200 border-b border-base-content/5 py-10 mb-8">
       <div class="max-w-7xl mx-auto px-6">
         <h1 class="text-3xl font-bold mb-2">Browse Anime</h1>
-        <p class="text-base-content/60 max-w-2xl">
-          Discover your next favorite anime. Use the filters below to narrow down your search by genre, format, status, and more.
+        <p class="text-base-content/60 max-w-2xl mb-6">
+          Search MyAnimeList by title, or jump into a ranking to find your next favorite.
         </p>
-      </div>
-    </div>
 
-    <!-- Main flexible layout -->
-    <div class="max-w-7xl mx-auto px-6">
-      <div class="flex flex-col lg:flex-row gap-8">
-        
-        <!-- Filter Sidebar -->
-        <aside class="w-full lg:w-72 shrink-0">
-          <div class="lg:sticky lg:top-24">
-            <BrowseFilterSidebar
-              v-model="filters"
-              :genres="genres"
-            />
-          </div>
-        </aside>
-
-        <!-- Results Column -->
-        <main class="flex-1 min-w-0">
-          <BrowseResultsGrid
-            :results="sortedResults"
-            :loading="loading"
-            :has-next-page="hasNextPage"
-            :list-status-map="listStatusMap"
-            @load-more="loadMore"
+        <!-- Search -->
+        <div class="relative max-w-xl">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/40 pointer-events-none"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            v-model="query"
+            type="search"
+            placeholder="Search anime titles..."
+            aria-label="Search anime titles"
+            class="input input-bordered w-full pl-10 pr-10"
           />
-        </main>
+          <button
+            v-if="query"
+            class="btn btn-ghost btn-xs btn-circle absolute right-2 top-1/2 -translate-y-1/2"
+            aria-label="Clear search"
+            @click="clearSearch"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
 
+        <!-- Ranking presets -->
+        <div class="flex flex-wrap items-center gap-2 mt-4">
+          <button
+            v-for="preset in RANKING_PRESETS"
+            :key="preset.value"
+            class="btn btn-sm rounded-full"
+            :class="!isSearching && activePreset === preset.value
+              ? 'btn-primary'
+              : 'btn-ghost border border-base-content/10'"
+            :title="preset.description"
+            @click="selectPreset(preset.value)"
+          >
+            {{ preset.label }}
+          </button>
+        </div>
       </div>
     </div>
+
+    <!-- Results -->
+    <main class="max-w-7xl mx-auto px-6">
+      <div class="flex flex-wrap items-baseline justify-between gap-3 mb-5">
+        <h2 class="text-lg font-bold">
+          <template v-if="isSearching">Results for “{{ debouncedQuery }}”</template>
+          <template v-else>{{ activePresetLabel }}</template>
+        </h2>
+        <span class="text-xs text-base-content/40">
+          {{ results.length }}{{ hasNext ? '+' : '' }} title{{ results.length === 1 ? '' : 's' }}
+        </span>
+      </div>
+
+      <BrowseResultsGrid
+        :results="results"
+        :loading="loading"
+        :has-next-page="hasNext"
+        :list-status-map="listStatusMap"
+        @load-more="loadMore"
+      />
+    </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { JikanAnime, JikanAnimeSearchFilter, JikanGenre } from '~/composables/useJikanApi'
+import type { AnimeNode, RankingType } from '~/utils/anime'
 
 useHead({
-  title: 'Browse — Anime Frame'
+  title: 'Browse — Anime Frame',
 })
 
-const { searchAnime, getAnimeGenres } = useJikanApi()
+const { search, getRanking } = useCatalogApi()
 const { isAuthenticated, getStatus } = useUserAnimeList()
+const route = useRoute()
+const router = useRouter()
 
-// Shared state
-const genres = ref<JikanGenre[]>([])
-const results = ref<JikanAnime[]>([])
+const LIMIT = 24
+
+// Accept both the new `preset` param and the old `filter` param used by
+// links from earlier versions of the home page.
+function normalizePreset(value: unknown): RankingType {
+  const raw = String(value ?? '')
+  return RANKING_PRESETS.some((preset) => preset.value === raw)
+    ? (raw as RankingType)
+    : 'all'
+}
+
+const initialPreset = normalizePreset(route.query.preset ?? route.query.filter)
+
+const query = ref(String(route.query.q ?? ''))
+const debouncedQuery = ref(query.value.trim())
+const activePreset = ref<RankingType>(initialPreset)
+
+const results = ref<AnimeNode[]>([])
 const loading = ref(false)
-const hasNextPage = ref(false)
+const hasNext = ref(false)
+const offset = ref(0)
+const ready = ref(false)
 
-// Default type sort order: TV → Special → Movie → everything else
-const TYPE_ORDER: Record<string, number> = { TV: 0, Special: 1, OVA: 2, ONA: 3, Movie: 4 }
+let debounceTimer: ReturnType<typeof setTimeout> | null = null
+let requestId = 0
 
-// When no explicit sort is chosen, apply our custom type ordering client-side
-const sortedResults = computed(() => {
-  if (filters.value.order_by) return results.value
-  return [...results.value].sort((a, b) => {
-    const aRank = TYPE_ORDER[a.type ?? ''] ?? 3
-    const bRank = TYPE_ORDER[b.type ?? ''] ?? 3
-    return aRank - bRank
-  })
-})
+const isSearching = computed(() => debouncedQuery.value.length > 0)
+const activePresetLabel = computed(
+  () => RANKING_PRESETS.find((preset) => preset.value === activePreset.value)?.label ?? 'Top Anime',
+)
 
-// Map of anime ID → list status for card badges
 const listStatusMap = computed<Record<number, import('~/composables/useMalApi').MalAnimeStatus>>(() => {
   if (!isAuthenticated.value) return {}
   const map: Record<number, import('~/composables/useMalApi').MalAnimeStatus> = {}
   for (const anime of results.value) {
-    const status = getStatus(anime.mal_id)
+    const status = getStatus(anime.id)
     if (status) {
-      map[anime.mal_id] = status.status
+      map[anime.id] = status.status
     }
   }
   return map
 })
 
-// Page is tracked separately so mutating it never re-triggers the filter watcher
-const currentPage = ref(1)
-const LIMIT = 24
-
-const route = useRoute()
-
-// Map the `filter` preset from Home Page ('airing', 'bypopularity', 'upcoming') to actual search params
-let initialStatus = (route.query.status as string) || ''
-let initialOrderBy = (route.query.order_by as string) || ''
-let initialSort: 'asc' | 'desc' = (route.query.sort as 'asc' | 'desc') || 'desc'
-
-if (route.query.filter === 'airing') {
-  initialStatus = 'airing'
-  initialOrderBy = 'score'
-} else if (route.query.filter === 'bypopularity') {
-  // Jikan's 'popularity' field is a rank (lowest number is best). Since default sort is 'desc',
-  // sorting by popularity would show the LEAST popular anime. We sort by 'members' instead
-  // to correctly show the most popular anime with a 'desc' sort.
-  initialOrderBy = 'members'
-} else if (route.query.filter === 'upcoming') {
-  initialStatus = 'upcoming'
-  initialOrderBy = 'members'
-}
-
-// User-controlled filter state only — no page here
-const filters = ref<JikanAnimeSearchFilter>({
-  q: (route.query.q as string) || '',
-  type: (route.query.type as string) || '',
-  status: initialStatus,
-  order_by: initialOrderBy,
-  sort: initialSort,
+// Debounce typing so we don't search on every keystroke.
+watch(query, (value) => {
+  if (debounceTimer) clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => {
+    debouncedQuery.value = value.trim()
+  }, 400)
 })
 
-// Debounce timer
-let searchTimeout: ReturnType<typeof setTimeout> | null = null
-
-// Load initial genres once
-onMounted(async () => {
-  try {
-    genres.value = await getAnimeGenres()
-  } catch (e) {
-    console.error('Failed to load genres', e)
-  }
+watch([debouncedQuery, activePreset], () => {
+  if (!ready.value) return
+  offset.value = 0
+  fetchPage(true)
 })
 
-// The main fetch function — page is a parameter, never touches filters
-const fetchResults = async (page: number, isLoadMore = false) => {
+async function fetchPage(reset: boolean) {
+  const id = ++requestId
   loading.value = true
 
-  if (!isLoadMore) {
-    results.value = []
-    currentPage.value = 1
-  }
+  const pageOffset = reset ? 0 : offset.value
 
   try {
-    const { data, pagination } = await searchAnime({
-      ...filters.value,
-      page,
-      limit: LIMIT,
-    })
+    const page = isSearching.value
+      ? await search(debouncedQuery.value, LIMIT, pageOffset)
+      : await getRanking(activePreset.value, LIMIT, pageOffset)
 
-    if (isLoadMore) {
-      results.value.push(...data)
-    } else {
-      results.value = data
-    }
+    // Ignore responses that arrived after a newer request started.
+    if (id !== requestId) return
 
-    hasNextPage.value = pagination.has_next_page
+    results.value = reset ? page.data : [...results.value, ...page.data]
+    hasNext.value = page.hasNext
+    offset.value = pageOffset + page.data.length
+    syncQuery()
   } catch (error) {
-    console.error('Failed to search anime', error)
-    if (!isLoadMore) results.value = []
+    if (id !== requestId) return
+    console.error('[Browse] Failed to load anime:', error)
+    if (reset) results.value = []
+    hasNext.value = false
   } finally {
-    loading.value = false
+    if (id === requestId) loading.value = false
   }
 }
 
-// Watch only user-controlled filters — page changes can never trigger this
-watch(
-  filters,
-  () => {
-    if (searchTimeout) clearTimeout(searchTimeout)
-    searchTimeout = setTimeout(() => {
-      fetchResults(1, false)
-    }, 600)
-  },
-  { deep: true, immediate: true }
-)
-
-// Pagination handler
-const loadMore = () => {
-  if (loading.value || !hasNextPage.value) return
-  const nextPage = currentPage.value + 1
-  currentPage.value = nextPage
-  fetchResults(nextPage, true)
+function loadMore() {
+  if (loading.value || !hasNext.value) return
+  fetchPage(false)
 }
+
+function selectPreset(preset: RankingType) {
+  // Clearing the query changes `debouncedQuery`, which triggers the watcher
+  // below; changing the preset does the same. No manual fetch needed.
+  if (isSearching.value) {
+    query.value = ''
+    debouncedQuery.value = ''
+  }
+  activePreset.value = preset
+}
+
+function clearSearch() {
+  query.value = ''
+  debouncedQuery.value = ''
+}
+
+function syncQuery() {
+  const nextQuery: Record<string, string> = {}
+  if (isSearching.value) {
+    nextQuery.q = debouncedQuery.value
+  } else if (activePreset.value !== 'all') {
+    nextQuery.preset = activePreset.value
+  }
+  router.replace({ query: nextQuery })
+}
+
+// Keep the UI in sync when the user navigates with back/forward.
+watch(() => route.fullPath, () => {
+  const nextQuery = String(route.query.q ?? '')
+  const nextPreset = normalizePreset(route.query.preset ?? route.query.filter)
+
+  if (nextQuery !== query.value) {
+    query.value = nextQuery
+    debouncedQuery.value = nextQuery.trim()
+  } else if (!nextQuery && nextPreset !== activePreset.value) {
+    activePreset.value = nextPreset
+  }
+})
+
+onMounted(() => {
+  ready.value = true
+  fetchPage(true)
+})
+
+onUnmounted(() => {
+  if (debounceTimer) clearTimeout(debounceTimer)
+})
 </script>

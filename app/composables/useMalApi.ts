@@ -77,8 +77,8 @@ export interface MalUpdateListParams {
   rewatch_value?: number
   tags?: string
   comments?: string
-  start_date?: string // yyyy-mm-dd
-  finish_date?: string // yyyy-mm-dd
+  start_date?: string | null // yyyy-mm-dd
+  finish_date?: string | null // yyyy-mm-dd
 }
 
 export interface MalUserStats {
@@ -222,8 +222,8 @@ export const useMalApi = () => {
     if (params.num_times_rewatched !== undefined) {
       body.set('num_times_rewatched', String(params.num_times_rewatched))
     }
-    if (params.start_date !== undefined) body.set('start_date', params.start_date)
-    if (params.finish_date !== undefined) body.set('finish_date', params.finish_date)
+    if (params.start_date) body.set('start_date', params.start_date)
+    if (params.finish_date) body.set('finish_date', params.finish_date)
     if (params.tags !== undefined) body.set('tags', params.tags)
     if (params.comments !== undefined) body.set('comments', params.comments)
     if (params.priority !== undefined) body.set('priority', String(params.priority))

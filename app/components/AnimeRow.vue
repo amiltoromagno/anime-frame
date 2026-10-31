@@ -59,10 +59,10 @@
           <template v-else>
             <div
               v-for="anime in animeList"
-              :key="anime.mal_id"
+              :key="anime.id"
               class="flex-shrink-0 w-44 lg:w-52"
             >
-              <AnimeCard :anime="anime" :list-status="getListStatus(anime.mal_id)" />
+              <AnimeCard :anime="anime" :list-status="getListStatus(anime.id)" />
             </div>
           </template>
         </div>
@@ -83,14 +83,14 @@
 </template>
 
 <script setup lang="ts">
-import type { JikanAnime } from '~/composables/useJikanApi'
+import type { AnimeNode } from '~/utils/anime'
 import type { MalAnimeStatus } from '~/composables/useMalApi'
 
 const props = defineProps<{
   title: string
   icon?: string
   viewAllLink?: string
-  animeList: JikanAnime[]
+  animeList: AnimeNode[]
   loading?: boolean
   listStatusMap?: Record<number, MalAnimeStatus>
 }>()

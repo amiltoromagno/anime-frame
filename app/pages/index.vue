@@ -9,7 +9,7 @@
       :anime-list="topAiring"
       :loading="loadingAiring"
       :list-status-map="listStatusMap"
-      view-all-link="/browse?filter=airing"
+      view-all-link="/browse?preset=airing"
     />
 
     <AnimeRow
@@ -17,7 +17,7 @@
       :anime-list="mostPopular"
       :loading="loadingPopular"
       :list-status-map="listStatusMap"
-      view-all-link="/browse?filter=bypopularity"
+      view-all-link="/browse?preset=bypopularity"
     />
 
     <AnimeRow
@@ -25,7 +25,7 @@
       :anime-list="topUpcoming"
       :loading="loadingUpcoming"
       :list-status-map="listStatusMap"
-      view-all-link="/browse?filter=upcoming"
+      view-all-link="/browse?preset=upcoming"
     />
 
     <AnimeRow
@@ -39,21 +39,21 @@
 </template>
 
 <script setup lang="ts">
-import type { JikanAnime } from '~/composables/useJikanApi'
+import type { AnimeNode } from '~/utils/anime'
 
 useHead({
   title: 'Anime Frame — Your Modern Anime Tracker',
 })
 
-const { getTopAnime, getSeasonNow } = useJikanApi()
+const { getRanking, getSeason } = useCatalogApi()
 const { isAuthenticated, getStatus } = useUserAnimeList()
 
 // Data refs
-const heroAnime = ref<JikanAnime[]>([])
-const topAiring = ref<JikanAnime[]>([])
-const mostPopular = ref<JikanAnime[]>([])
-const topUpcoming = ref<JikanAnime[]>([])
-const seasonNow = ref<JikanAnime[]>([])
+const heroAnime = ref<AnimeNode[]>([])
+const topAiring = ref<AnimeNode[]>([])
+const mostPopular = ref<AnimeNode[]>([])
+const topUpcoming = ref<AnimeNode[]>([])
+const seasonNow = ref<AnimeNode[]>([])
 
 // Loading states
 const loadingAiring = ref(true)
@@ -67,42 +67,42 @@ const listStatusMap = computed<Record<number, import('~/composables/useMalApi').
   const allAnime = [...topAiring.value, ...mostPopular.value, ...topUpcoming.value, ...seasonNow.value]
   const map: Record<number, import('~/composables/useMalApi').MalAnimeStatus> = {}
   for (const anime of allAnime) {
-    const status = getStatus(anime.mal_id)
+    const status = getStatus(anime.id)
     if (status) {
-      map[anime.mal_id] = status.status
+      map[anime.id] = status.status
     }
   }
   return map
 })
 
-// Fetch data sequentially to respect Jikan rate limits
+// All sections load in parallel — MAL has no documented per-second throttle,
+// and requests are deduplicated/cached by the catalog client and server proxy.
 onMounted(async () => {
-  try {
-    // Fetch top anime for hero (first 5)
-    const topData = await getTopAnime(undefined, 5)
-    heroAnime.value = topData
+  const season = getCurrentSeason()
 
-    // Top airing
-    topAiring.value = await getTopAnime('airing', 15)
-    loadingAiring.value = false
+  const [hero, airing, popular, upcoming, currentSeason] = await Promise.allSettled([
+    getRanking('all', 5),
+    getRanking('airing', 15),
+    getRanking('bypopularity', 15),
+    getRanking('upcoming', 15),
+    getSeason(season.year, season.season, 15),
+  ])
 
-    // Most popular
-    mostPopular.value = await getTopAnime('bypopularity', 15)
-    loadingPopular.value = false
+  heroAnime.value = hero.status === 'fulfilled' ? hero.value.data : []
+  topAiring.value = airing.status === 'fulfilled' ? airing.value.data : []
+  mostPopular.value = popular.status === 'fulfilled' ? popular.value.data : []
+  topUpcoming.value = upcoming.status === 'fulfilled' ? upcoming.value.data : []
+  seasonNow.value = currentSeason.status === 'fulfilled' ? currentSeason.value.data : []
 
-    // Top upcoming
-    topUpcoming.value = await getTopAnime('upcoming', 15)
-    loadingUpcoming.value = false
+  loadingAiring.value = false
+  loadingPopular.value = false
+  loadingUpcoming.value = false
+  loadingSeason.value = false
 
-    // Season now
-    seasonNow.value = await getSeasonNow(15)
-    loadingSeason.value = false
-  } catch (error) {
-    console.error('Failed to fetch anime data:', error)
-    loadingAiring.value = false
-    loadingPopular.value = false
-    loadingUpcoming.value = false
-    loadingSeason.value = false
+  for (const result of [hero, airing, popular, upcoming, currentSeason]) {
+    if (result.status === 'rejected') {
+      console.error('[Home] Failed to load a section:', result.reason)
+    }
   }
 })
 </script>

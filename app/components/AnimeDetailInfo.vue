@@ -27,62 +27,51 @@
       <p class="text-base-content/70 leading-relaxed text-sm">{{ anime.background }}</p>
     </section>
 
-
     <!-- Related anime -->
-    <section v-if="anime.relations?.length">
+    <section v-if="relationGroups.length">
       <h2 class="text-base font-bold uppercase tracking-widest text-base-content/40 mb-3">Related</h2>
       <div class="space-y-2">
         <div
-          v-for="rel in anime.relations"
-          :key="rel.relation"
+          v-for="group in relationGroups"
+          :key="group.label"
           class="grid grid-cols-[7rem_1fr] gap-x-4 gap-y-1"
         >
-          <span class="text-xs font-bold text-base-content/50 uppercase tracking-wide">{{ rel.relation }}</span>
+          <span class="text-xs font-bold text-base-content/50 uppercase tracking-wide">{{ group.label }}</span>
           <div class="flex flex-wrap gap-1.5">
             <NuxtLink
-              v-for="entry in rel.entry"
-              :key="entry.mal_id"
-              :to="entry.type === 'anime' ? `/anime/${entry.mal_id}` : '#'"
+              v-for="relation in group.entries"
+              :key="relation.node.id"
+              :to="`/anime/${relation.node.id}`"
               class="text-sm link link-primary"
-            >{{ entry.name }}</NuxtLink>
+            >{{ relation.node.title }}</NuxtLink>
           </div>
         </div>
       </div>
-    </section>
-
-    <!-- Opening themes -->
-    <section v-if="anime.theme?.openings?.length">
-      <h2 class="text-base font-bold uppercase tracking-widest text-base-content/40 mb-3">Opening Themes</h2>
-      <ol class="space-y-1 list-decimal list-inside">
-        <li
-          v-for="(op, i) in anime.theme.openings"
-          :key="i"
-          class="text-sm text-base-content/70"
-        >{{ op }}</li>
-      </ol>
-    </section>
-
-    <!-- Ending themes -->
-    <section v-if="anime.theme?.endings?.length">
-      <h2 class="text-base font-bold uppercase tracking-widest text-base-content/40 mb-3">Ending Themes</h2>
-      <ol class="space-y-1 list-decimal list-inside">
-        <li
-          v-for="(ed, i) in anime.theme.endings"
-          :key="i"
-          class="text-sm text-base-content/70"
-        >{{ ed }}</li>
-      </ol>
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { JikanAnimeFullDetail } from '~/composables/useJikanApi'
+import type { AnimeNode, AnimeRelation } from '~/utils/anime'
 
 const props = defineProps<{
-  anime: JikanAnimeFullDetail
+  anime: AnimeNode
 }>()
 
 const synopsisExpanded = ref(false)
 
+// MAL returns a flat `related_anime` list; group it by relation type for display.
+const relationGroups = computed(() => {
+  const groups = new Map<string, AnimeRelation[]>()
+
+  for (const relation of props.anime.related_anime ?? []) {
+    const label = relation.relation_type_formatted
+      || capitalize(relation.relation_type.replace(/_/g, ' '))
+    const entries = groups.get(label) ?? []
+    entries.push(relation)
+    groups.set(label, entries)
+  }
+
+  return [...groups.entries()].map(([label, entries]) => ({ label, entries }))
+})
 </script>

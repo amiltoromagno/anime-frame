@@ -1,8 +1,10 @@
-import type { JikanAnime, JikanAnimeFullDetail } from '~/composables/useJikanApi'
+import type { AnimeNode } from '~/utils/anime'
 
 type TitlePref = 'english' | 'romaji'
 
 const STORAGE_KEY = 'animeframe-title-pref'
+
+type TitledAnime = Pick<AnimeNode, 'title' | 'alternative_titles'>
 
 export const useTitlePreference = () => {
   const titlePref = useState<TitlePref>('titlePref', () => {
@@ -19,11 +21,12 @@ export const useTitlePreference = () => {
     }
   }
 
-  const displayTitle = (anime: Pick<JikanAnime | JikanAnimeFullDetail, 'title' | 'title_english'>): string => {
-    if (titlePref.value === 'romaji' || !anime.title_english) {
+  const displayTitle = (anime: TitledAnime): string => {
+    const english = anime.alternative_titles?.en?.trim()
+    if (titlePref.value === 'romaji' || !english) {
       return anime.title
     }
-    return anime.title_english
+    return english
   }
 
   return { titlePref, toggleTitlePref, displayTitle }

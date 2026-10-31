@@ -32,7 +32,7 @@ function generateCodeVerifier(): string {
   const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~'
   const array = new Uint8Array(64)
   crypto.getRandomValues(array)
-  return Array.from(array, (byte) => charset[byte % charset.length]).join('')
+  return Array.from(array, (byte) => charset[byte % charset.length]!).join('')
 }
 
 async function sha256(plain: string): Promise<ArrayBuffer> {
@@ -44,7 +44,7 @@ function base64UrlEncode(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer)
   let binary = ''
   for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i])
+    binary += String.fromCharCode(bytes[i]!)
   }
   return btoa(binary)
     .replace(/\+/g, '-')

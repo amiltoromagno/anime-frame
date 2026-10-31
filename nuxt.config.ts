@@ -30,7 +30,7 @@ export default defineNuxtConfig({
     head: {
       title: 'Anime Frame — Your Modern Anime Tracker',
       meta: [
-        { name: 'description', content: 'Track, discover, and explore anime with Anime Frame — a modern anime database powered by Jikan API.' },
+        { name: 'description', content: 'Track, discover, and explore anime with Anime Frame — a modern anime database powered by the official MyAnimeList API.' },
       ],
       link: [
         { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },

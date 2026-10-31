@@ -50,7 +50,7 @@
             >
               {{ entry.season }}
             </span>
-            <!-- Year label — only show on first season of a year or selected -->
+            <!-- Year label -->
             <span
               class="text-[10px] font-semibold transition-all duration-300"
               :class="[
@@ -113,39 +113,26 @@
 </template>
 
 <script setup lang="ts">
-import type { JikanAnime, JikanSeason, SeasonName } from '~/composables/useJikanApi'
+import type { AnimeNode, AnimeSeason } from '~/utils/anime'
 
 useHead({ title: 'Seasonal — Anime Frame' })
 
-const { getSeasonsList, getSeasonAnime } = useJikanApi()
+const { getSeason } = useCatalogApi()
 
 // ── Season list ──────────────────────────────────────────────────
-const SEASON_ORDER: SeasonName[] = ['winter', 'spring', 'summer', 'fall']
+// MAL exposes no "list seasons" endpoint, so the timeline is generated
+// locally from SEASON_TIMELINE_START_YEAR through the current season.
+const timeline = ref<AnimeSeason[]>([])
+const selected = ref<AnimeSeason>(getCurrentSeason())
 
-interface SeasonEntry { year: number; season: SeasonName }
+const isCurrentSeason = computed(() => isSameSeason(selected.value, getCurrentSeason()))
 
-const timeline = ref<SeasonEntry[]>([])
-const selected = ref<SeasonEntry>({ year: new Date().getFullYear(), season: currentSeasonName() })
-
-function currentSeasonName(): SeasonName {
-  const m = new Date().getMonth()
-  if (m < 3) return 'winter'
-  if (m < 6) return 'spring'
-  if (m < 9) return 'summer'
-  return 'fall'
+function isSelected(entry: AnimeSeason) {
+  return isSameSeason(entry, selected.value)
 }
 
-const isCurrentSeason = computed(() =>
-  selected.value.year === new Date().getFullYear() &&
-  selected.value.season === currentSeasonName()
-)
-
-function isSelected(e: SeasonEntry) {
-  return e.year === selected.value.year && e.season === selected.value.season
-}
-
-const seasonEmoji = (s: string) =>
-  ({ winter: '❄️', spring: '🌸', summer: '☀️', fall: '🍂' }[s] ?? '📅')
+const seasonEmoji = (season: string) =>
+  ({ winter: '❄️', spring: '🌸', summer: '☀️', fall: '🍂' }[season] ?? '📅')
 
 // ── Timeline scroll ───────────────────────────────────────────────
 const timelineEl = ref<HTMLElement | null>(null)
@@ -194,108 +181,82 @@ const onDrag = (e: MouseEvent) => {
 }
 
 // ── Results ───────────────────────────────────────────────────────
-const results = ref<JikanAnime[]>([])
+const results = ref<AnimeNode[]>([])
 const loading = ref(false)
 const hasNextPage = ref(false)
-const currentPage = ref(1)
+const offset = ref(0)
 const LIMIT = 24
 
+let requestId = 0
+
 // Type priority sort (same logic as Browse)
-const TYPE_ORDER: Record<string, number> = { TV: 0, Special: 1, OVA: 2, ONA: 3, Movie: 4 }
+const TYPE_ORDER: Record<string, number> = { tv: 0, special: 1, ova: 2, ona: 3, movie: 4 }
 
 const sortedResults = computed(() =>
   [...results.value].sort((a, b) => {
-    const aR = TYPE_ORDER[a.type ?? ''] ?? 3
-    const bR = TYPE_ORDER[b.type ?? ''] ?? 3
-    return aR - bR
-  })
+    const aRank = TYPE_ORDER[a.media_type ?? ''] ?? 3
+    const bRank = TYPE_ORDER[b.media_type ?? ''] ?? 3
+    return aRank - bRank
+  }),
 )
 
 // Map of anime ID → list status for card badges
-const { isAuthenticated: isAuth, getStatus } = useUserAnimeList()
+const { isAuthenticated, getStatus } = useUserAnimeList()
 const listStatusMap = computed<Record<number, import('~/composables/useMalApi').MalAnimeStatus>>(() => {
-  if (!isAuth.value) return {}
+  if (!isAuthenticated.value) return {}
   const map: Record<number, import('~/composables/useMalApi').MalAnimeStatus> = {}
   for (const anime of results.value) {
-    const status = getStatus(anime.mal_id)
+    const status = getStatus(anime.id)
     if (status) {
-      map[anime.mal_id] = status.status
+      map[anime.id] = status.status
     }
   }
   return map
 })
 
-const fetchResults = async (page: number, isLoadMore = false) => {
+async function fetchResults(reset: boolean) {
+  const id = ++requestId
   loading.value = true
-  if (!isLoadMore) {
-    results.value = []
-    currentPage.value = 1
-  }
+
+  const pageOffset = reset ? 0 : offset.value
+
   try {
-    const { data, pagination } = await getSeasonAnime(selected.value.year, selected.value.season, page, LIMIT)
-    results.value = isLoadMore ? [...results.value, ...data] : data
-    hasNextPage.value = pagination.has_next_page
-  } catch (e) {
-    console.error('Failed to load season', e)
+    const page = await getSeason(selected.value.year, selected.value.season, LIMIT, pageOffset)
+    if (id !== requestId) return
+
+    results.value = reset ? page.data : [...results.value, ...page.data]
+    hasNextPage.value = page.hasNext
+    offset.value = pageOffset + page.data.length
+  } catch (error) {
+    if (id !== requestId) return
+    console.error('[Seasonal] Failed to load season:', error)
+    if (reset) results.value = []
+    hasNextPage.value = false
   } finally {
-    loading.value = false
+    if (id === requestId) loading.value = false
   }
 }
 
 const loadMore = () => {
   if (loading.value || !hasNextPage.value) return
-  const next = currentPage.value + 1
-  currentPage.value = next
-  fetchResults(next, true)
+  fetchResults(false)
 }
 
-const selectSeason = (entry: SeasonEntry) => {
+const selectSeason = (entry: AnimeSeason) => {
   if (isSelected(entry)) return
   selected.value = entry
-  fetchResults(1, false)
+  offset.value = 0
+  fetchResults(true)
   scrollToSelected()
 }
 
 // ── Boot ──────────────────────────────────────────────────────────
 onMounted(async () => {
-  try {
-    const raw: JikanSeason[] = await getSeasonsList()
-    const entries: SeasonEntry[] = []
-    
-    // Jikan returns seasons from newest to oldest.
-    // We want left-to-right (oldest to newest), so we process the raw array in reverse.
-    for (let i = raw.length - 1; i >= 0; i--) {
-      const row = raw[i]
-      if (!row) continue
-      // push seasons in chronological order (winter -> spring -> summer -> fall)
-      for (const s of SEASON_ORDER) {
-        if (row.seasons.includes(s)) {
-          entries.push({ year: row.year, season: s })
-        }
-      }
-    }
-    timeline.value = entries
+  timeline.value = buildSeasonTimeline()
+  const current = timeline.value[timeline.value.length - 1]
+  if (current) selected.value = current
 
-    const currYear = new Date().getFullYear()
-    const currSeason = currentSeasonName()
-
-    if (timeline.value.length) {
-      // Find the actual current season in the timeline
-      const currentEntryIndex = entries.findIndex(e => e.year === currYear && e.season === currSeason)
-      
-      if (currentEntryIndex !== -1) {
-        selected.value = entries[currentEntryIndex]!
-      } else {
-        // Fallback to the newest available season if current is missing
-        selected.value = entries[entries.length - 1]!
-      }
-    }
-  } catch (e) {
-    console.error('Failed to load seasons list', e)
-    // Fallback: just use current season defaults created in ref
-  }
-
-  await fetchResults(1, false)
+  await fetchResults(true)
   scrollToSelected()
 })
 </script>

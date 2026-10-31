@@ -140,8 +140,9 @@
     <!-- Footer -->
     <footer class="footer footer-center bg-base-200 text-base-content p-6 border-t border-base-content/5">
       <aside>
-        <p class="text-sm opacity-70">Powered by
-          <a href="https://jikan.moe/" target="_blank" class="link link-primary">Jikan API</a>
+        <p class="text-sm opacity-70">Data from
+          <a href="https://myanimelist.net" target="_blank" class="link link-primary">MyAnimeList</a>
+          <span class="opacity-50">· official API</span>
         </p>
       </aside>
     </footer>

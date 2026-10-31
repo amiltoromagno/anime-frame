@@ -73,7 +73,7 @@
               <!-- List Management -->
               <AnimeListManager
                 :anime-id="id"
-                :total-episodes="anime.episodes"
+                :total-episodes="totalEpisodes"
               />
               <AnimeDetailSidebar :anime="anime" />
             </div>
@@ -83,29 +83,10 @@
           <main class="flex-1 min-w-0 space-y-10">
             <AnimeDetailInfo :anime="anime" />
 
-            <!-- Characters -->
-            <AnimeDetailCharacters
-              v-if="characters.length"
-              :characters="characters"
-            />
-
-            <!-- Trailer -->
-            <section v-if="anime.trailer?.embed_url">
-              <h2 class="text-base font-bold uppercase tracking-widest text-base-content/40 mb-4">Trailer</h2>
-              <div class="rounded-xl overflow-hidden aspect-video bg-base-300">
-                <iframe
-                  :src="trailerUrl"
-                  class="w-full h-full"
-                  allowfullscreen
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                />
-              </div>
-            </section>
-
-            <!-- Recommendations -->
+            <!-- Recommendations (included in the detail request) -->
             <AnimeDetailRecommendations
-              v-if="recommendations?.length"
-              :recommendations="recommendations"
+              v-if="anime.recommendations?.length"
+              :recommendations="anime.recommendations"
             />
           </main>
         </div>
@@ -116,72 +97,47 @@
 </template>
 
 <script setup lang="ts">
-import type { JikanAnimeFullDetail, JikanCharacter, JikanRecommendation } from '~/composables/useJikanApi'
+import type { AnimeNode } from '~/utils/anime'
 
 const route = useRoute()
 const id = Number(route.params.id)
 
-const { getAnimeFullById, getAnimeCharacters, getAnimeRecommendations } = useJikanApi()
+const { getAnime } = useCatalogApi()
 
-const anime = ref<JikanAnimeFullDetail | null>(null)
-const characters = ref<JikanCharacter[]>([])
-const recommendations = ref<JikanRecommendation[]>([])
+const anime = ref<AnimeNode | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
 
+const totalEpisodes = computed(() =>
+  anime.value?.num_episodes && anime.value.num_episodes > 0
+    ? anime.value.num_episodes
+    : null,
+)
+
 onMounted(async () => {
-  if (!id || isNaN(id)) {
+  if (!id || Number.isNaN(id)) {
     error.value = 'Invalid anime ID.'
     loading.value = false
     return
   }
 
   try {
-    // Fetch main details first (required for the page)
-    anime.value = await getAnimeFullById(id)
-
-    // Fetch supporting data independently — don't fail the page if one breaks
-    const [chars, recs] = await Promise.allSettled([
-      getAnimeCharacters(id),
-      getAnimeRecommendations(id),
-    ])
-    characters.value = chars.status === 'fulfilled' ? chars.value : []
-    recommendations.value = recs.status === 'fulfilled' ? recs.value : []
-
-    if (recs.status === 'rejected') {
-      console.warn('Failed to load recommendations:', recs.reason)
-    }
-    if (chars.status === 'rejected') {
-      console.warn('Failed to load characters:', chars.reason)
-    }
-  } catch (e: any) {
-    if (e.message?.includes('404')) {
+    anime.value = await getAnime(id)
+  } catch (err: any) {
+    if (err.message?.includes('(404)')) {
       error.value = 'This anime could not be found. It may not exist or the ID is incorrect.'
     } else {
-      error.value = e.message || 'Something went wrong while fetching data.'
+      error.value = err.message || 'Something went wrong while fetching data.'
     }
   } finally {
     loading.value = false
   }
 })
 
-// Strip autoplay from Jikan trailer embed URL
-const trailerUrl = computed(() => {
-  const url = anime.value?.trailer?.embed_url
-  if (!url) return ''
-  try {
-    const u = new URL(url)
-    u.searchParams.delete('autoplay')
-    return u.toString()
-  } catch {
-    return url
-  }
-})
-
 // Set page title dynamically
 useHead(computed(() => ({
   title: anime.value
-    ? `${anime.value.title_english || anime.value.title} — Anime Frame`
+    ? `${anime.value.alternative_titles?.en?.trim() || anime.value.title} — Anime Frame`
     : 'Loading… — Anime Frame',
 })))
 </script>

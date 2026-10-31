@@ -1,12 +1,12 @@
 <template>
   <NuxtLink
-    :to="`/anime/${anime.mal_id}`"
+    :to="`/anime/${anime.id}`"
     class="group block relative overflow-hidden rounded-xl bg-base-200 transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1"
   >
     <!-- Image container -->
     <div class="relative aspect-[3/4] overflow-hidden">
       <img
-        :src="anime.images?.webp?.large_image_url || anime.images?.jpg?.large_image_url"
+        :src="anime.main_picture?.large || anime.main_picture?.medium"
         :alt="displayTitle(anime)"
         class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
         loading="lazy"
@@ -16,14 +16,14 @@
 
       <!-- Score badge -->
       <div
-        v-if="anime.score && !listStatus"
+        v-if="anime.mean && !listStatus"
         class="absolute top-2 left-2 badge badge-sm font-bold gap-1"
         :class="scoreClass"
       >
         <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
         </svg>
-        {{ anime.score.toFixed(1) }}
+        {{ anime.mean.toFixed(1) }}
       </div>
 
       <!-- List status badge (overrides score position) -->
@@ -36,22 +36,22 @@
       </div>
       <!-- Score below status when both present -->
       <div
-        v-if="anime.score && listStatus"
+        v-if="anime.mean && listStatus"
         class="absolute top-9 left-2 badge badge-xs font-bold gap-0.5"
         :class="scoreClass"
       >
         <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
         </svg>
-        {{ anime.score.toFixed(1) }}
+        {{ anime.mean.toFixed(1) }}
       </div>
 
       <!-- Type badge -->
       <div
-        v-if="anime.type"
+        v-if="anime.media_type"
         class="absolute top-2 right-2 badge badge-sm badge-neutral font-medium"
       >
-        {{ anime.type }}
+        {{ mediaTypeLabel(anime.media_type) }}
       </div>
 
       <!-- Hover info -->
@@ -59,7 +59,7 @@
         <div class="flex flex-wrap gap-1">
           <span
             v-for="genre in anime.genres?.slice(0, 3)"
-            :key="genre.mal_id"
+            :key="genre.id"
             class="badge badge-xs bg-white/90 text-black font-medium"
           >
             {{ genre.name }}
@@ -74,27 +74,27 @@
         {{ displayTitle(anime) }}
       </h3>
       <div class="flex items-center gap-2 mt-1 text-xs opacity-60">
-        <span v-if="anime.episodes">{{ anime.episodes }} eps</span>
-        <span v-if="anime.episodes && anime.season">·</span>
-        <span v-if="anime.season" class="capitalize">{{ anime.season }} {{ anime.year }}</span>
+        <span v-if="anime.num_episodes">{{ anime.num_episodes }} eps</span>
+        <span v-if="anime.num_episodes && anime.start_season">·</span>
+        <span v-if="anime.start_season">{{ seasonLabel(anime.start_season) }}</span>
       </div>
     </div>
   </NuxtLink>
 </template>
 
 <script setup lang="ts">
-import type { JikanAnime } from '~/composables/useJikanApi'
+import type { AnimeNode } from '~/utils/anime'
 import type { MalAnimeStatus } from '~/composables/useMalApi'
 
 const props = defineProps<{
-  anime: JikanAnime
+  anime: AnimeNode
   listStatus?: MalAnimeStatus | null
 }>()
 
 const { displayTitle } = useTitlePreference()
 
 const scoreClass = computed(() => {
-  const score = props.anime.score
+  const score = props.anime.mean
   if (!score) return 'badge-ghost'
   if (score >= 8) return 'badge-success text-success-content'
   if (score >= 6) return 'badge-warning text-warning-content'
