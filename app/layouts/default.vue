@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen flex flex-col">
     <!-- Navbar -->
-    <header class="navbar bg-base-100/80 backdrop-blur-lg border-b border-base-content/5 sticky top-0 z-50">
+    <header class="navbar bg-base-100/80 backdrop-blur-lg border-b border-base-content/5 sticky top-0 z-50 safe-top">
       <div class="navbar-start">
         <!-- Mobile menu -->
         <details class="dropdown lg:hidden" ref="mobileMenuRef">
@@ -138,7 +138,7 @@
     </main>
 
     <!-- Footer -->
-    <footer class="footer footer-center bg-base-200 text-base-content p-6 border-t border-base-content/5">
+    <footer class="footer footer-center bg-base-200 text-base-content p-6 border-t border-base-content/5 safe-bottom">
       <aside>
         <p class="text-sm opacity-70">Data from
           <a href="https://myanimelist.net" target="_blank" class="link link-primary">MyAnimeList</a>

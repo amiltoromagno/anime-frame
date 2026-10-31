@@ -1,3 +1,5 @@
+import { setRedirectTarget } from '~/composables/useAuth'
+
 export default defineNuxtRouteMiddleware(async (to) => {
   // Only run on client side
   if (import.meta.server) return
@@ -11,7 +13,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   if (!isAuthenticated.value) {
     // Save the intended destination so we can redirect back after login
-    sessionStorage.setItem('animeframe-redirect-to', to.fullPath)
+    await setRedirectTarget(to.fullPath)
     return navigateTo('/login')
   }
 })

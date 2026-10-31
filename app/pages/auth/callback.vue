@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { takeRedirectTarget } from '~/composables/useAuth'
+
 definePageMeta({
   layout: false,
 })
@@ -36,8 +38,7 @@ onMounted(async () => {
   if (result === true) {
     status.value = 'success'
     // Restore where the user was heading, or go home
-    const redirectTo = sessionStorage.getItem('animeframe-redirect-to') || '/'
-    sessionStorage.removeItem('animeframe-redirect-to')
+    const redirectTo = await takeRedirectTarget()
     await navigateTo(redirectTo, { replace: true })
   } else {
     status.value = 'error'

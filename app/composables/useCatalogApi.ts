@@ -17,7 +17,7 @@ import type {
   SeasonName,
 } from '~/utils/anime'
 
-const PUBLIC_ENDPOINT = '/api/mal-public'
+const MAL_PUBLIC_PATH = '/api/mal-public'
 
 const COMMON_FIELDS = [
   'id',
@@ -92,11 +92,12 @@ function remember(key: string, value: unknown): void {
 }
 
 async function request<T>(
+  endpoint: string,
   path: string,
   params: Record<string, string | number | undefined> = {},
 ): Promise<T> {
   const query = buildQuery(params)
-  const key = `${path}${query}`
+  const key = `${endpoint}/${path}${query}`
 
   const cached = cache.get(key)
   if (cached && Date.now() - cached.at < CACHE_TTL) {
@@ -107,7 +108,7 @@ async function request<T>(
   if (pending) return pending as Promise<T>
 
   const promise = (async () => {
-    const response = await fetch(`${PUBLIC_ENDPOINT}/${path}${query}`, {
+    const response = await fetch(`${endpoint}/${path}${query}`, {
       headers: { Accept: 'application/json' },
     })
 
@@ -145,13 +146,16 @@ function unwrapList(response: MalListResponse): AnimeListPage {
 }
 
 export const useCatalogApi = () => {
+  const apiBase = String(useRuntimeConfig().public.apiBase ?? '').replace(/\/$/, '')
+  const endpoint = `${apiBase}${MAL_PUBLIC_PATH}`
+
   // ── Rankings ─────────────────────────────────────────────
   async function getRanking(
     type: RankingType = 'all',
     limit = 15,
     offset = 0,
   ): Promise<AnimeListPage> {
-    const response = await request<MalListResponse>('anime/ranking', {
+    const response = await request<MalListResponse>(endpoint, 'anime/ranking', {
       ranking_type: type,
       limit,
       offset,
@@ -168,7 +172,7 @@ export const useCatalogApi = () => {
     limit = 24,
     offset = 0,
   ): Promise<AnimeListPage> {
-    const response = await request<MalListResponse>(`anime/season/${year}/${season}`, {
+    const response = await request<MalListResponse>(endpoint, `anime/season/${year}/${season}`, {
       limit,
       offset,
       fields: LIST_FIELDS,
@@ -189,7 +193,7 @@ export const useCatalogApi = () => {
     const term = query.trim()
     if (!term) return { data: [], hasNext: false }
 
-    const response = await request<MalListResponse>('anime', {
+    const response = await request<MalListResponse>(endpoint, 'anime', {
       q: term,
       limit,
       offset,
@@ -201,7 +205,7 @@ export const useCatalogApi = () => {
 
   // ── Detail ───────────────────────────────────────────────
   async function getAnime(id: number): Promise<AnimeNode> {
-    return request<AnimeNode>(`anime/${id}`, { fields: FULL_FIELDS })
+    return request<AnimeNode>(endpoint, `anime/${id}`, { fields: FULL_FIELDS })
   }
 
   return {

@@ -107,6 +107,7 @@ async function authenticatedFetch(
   url: string,
   options: RequestInit = {},
   retries = 2,
+  apiBase = '',
 ): Promise<Response> {
   const { accessToken, refreshAccessToken, logout } = useAuth()
 
@@ -116,7 +117,7 @@ async function authenticatedFetch(
 
   const makeRequest = async (token: string): Promise<Response> => {
     // Route through our proxy to avoid CORS issues with MAL's API
-    const proxyUrl = url.replace('https://api.myanimelist.net/v2/', '/api/mal-proxy/')
+    const proxyUrl = url.replace('https://api.myanimelist.net/v2/', `${apiBase}/api/mal-proxy/`)
     return fetch(proxyUrl, {
       ...options,
       headers: {
@@ -147,10 +148,14 @@ async function authenticatedFetch(
 export const useMalApi = () => {
   const config = useRuntimeConfig()
   const baseUrl = config.public.malApiBaseUrl as string
+  const apiBase = String(config.public.apiBase ?? '').replace(/\/$/, '')
+
+  const fetchWithAuth = (url: string, options?: RequestInit) =>
+    authenticatedFetch(url, options, 2, apiBase)
 
   // ── Get user profile (including stats) ──────────────────
   async function getUserProfile(): Promise<MalUser & MalUserStats> {
-    const response = await authenticatedFetch(
+    const response = await fetchWithAuth(
       `${baseUrl}/users/@me?fields=anime_statistics`,
     )
     if (!response.ok) {
@@ -178,7 +183,7 @@ export const useMalApi = () => {
     if (params?.limit) query.set('limit', String(params.limit))
     if (params?.offset) query.set('offset', String(params.offset))
 
-    const response = await authenticatedFetch(
+    const response = await fetchWithAuth(
       `${baseUrl}/users/@me/animelist?${query.toString()}`,
     )
     if (!response.ok) {
@@ -191,7 +196,7 @@ export const useMalApi = () => {
   // MAL doesn't have GET /anime/{id}/my_list_status — the status is a field
   // on the anime object, so we request GET /anime/{id}?fields=my_list_status
   async function getAnimeListStatus(animeId: number): Promise<MalListStatus | null> {
-    const response = await authenticatedFetch(
+    const response = await fetchWithAuth(
       `${baseUrl}/anime/${animeId}?fields=my_list_status`,
     )
     if (response.status === 404) return null
@@ -231,7 +236,7 @@ export const useMalApi = () => {
       body.set('rewatch_value', String(params.rewatch_value))
     }
 
-    const response = await authenticatedFetch(
+    const response = await fetchWithAuth(
       `${baseUrl}/anime/${animeId}/my_list_status`,
       {
         method: 'PATCH',
@@ -248,7 +253,7 @@ export const useMalApi = () => {
 
   // ── Remove anime from list ─────────────────────────────
   async function deleteAnimeListStatus(animeId: number): Promise<void> {
-    const response = await authenticatedFetch(
+    const response = await fetchWithAuth(
       `${baseUrl}/anime/${animeId}/my_list_status`,
       { method: 'DELETE' },
     )

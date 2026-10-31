@@ -53,6 +53,82 @@ The project targets Cloudflare Pages (`cloudflare_pages` preset, output in `dist
 For production, set `NUXT_MAL_CLIENT_SECRET` as a secret in the Cloudflare
 dashboard — never commit it.
 
+## Android app (Capacitor)
+
+The Android build is a static SPA packaged with Capacitor. Cloudflare remains
+the API backend; the client secret never ships inside the app.
+
+### One-time MAL configuration
+
+Add this redirect URI to the MAL API app, next to the web callback:
+
+```text
+animeframe://auth/callback
+```
+
+Android returns to the app through that custom scheme
+(`app/plugins/native-deeplink.client.ts`).
+
+### Prerequisites
+
+- JDK 21
+- Android SDK 36 (Android Studio or command-line tools)
+- `ANDROID_HOME` pointing at the SDK
+
+### Build and run
+
+```bash
+npm run android:sync      # static SPA build + npx cap sync android
+npm run android:open      # open android/ in Android Studio
+npm run android:run       # build + install on a connected device/emulator
+```
+
+Or build an APK from the command line:
+
+```bash
+npm run android:apk
+# android/app/build/outputs/apk/debug/app-debug.apk
+
+adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+Release builds need a keystore and a signing config in
+`android/app/build.gradle`.
+
+### API origin and CORS
+
+`npm run build:mobile` bakes in `NUXT_PUBLIC_API_BASE` (default
+`https://anime-frame.pages.dev`). The Capacitor WebView origin is
+`https://localhost`, which `server/middleware/cors.ts` allowlists. For live
+reload, add the LAN dev-server origin:
+
+```dotenv
+NUXT_CORS_ALLOWED_ORIGINS=http://192.168.1.10:3000
+```
+
+### First run
+
+The APK talks to the deployed backend, so deploy the updated web app before
+installing it. Then:
+
+1. Add `animeframe://auth/callback` to the MAL app's redirect URIs.
+2. Install `android/app/build/outputs/apk/debug/app-debug.apk`
+   (`npm run android:install`).
+3. Sign in.
+
+If catalog pages stay empty, the deployed backend is stale or rejecting the
+`https://localhost` origin in `server/middleware/cors.ts`.
+
+### Notes
+
+- The application ID is `dev.animeframe.app` in `capacitor.config.ts`; change
+  it before the first release if desired.
+- Tokens are stored with Android Keystore-backed secure storage
+  (`capacitor-secure-storage-plugin`), not `localStorage`.
+- `MOBILE_BUILD=true` switches Nuxt to SPA mode and the `static` Nitro preset.
+- The hardware back button walks the router history before exiting
+  (`app/plugins/android-back.client.ts`).
+
 ## API limitations
 
 The official API deliberately exposes a smaller catalog than the website. The

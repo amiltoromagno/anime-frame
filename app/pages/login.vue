@@ -147,11 +147,14 @@
 </template>
 
 <script setup lang="ts">
+import { setRedirectTarget } from '~/composables/useAuth'
+
 definePageMeta({
   layout: false,
 })
 
 const config = useRuntimeConfig()
+const route = useRoute()
 const { login, logout, isAuthenticated, user } = useAuth()
 const loginLoading = ref(false)
 const clientIdConfigured = computed(() => !!config.public.malClientId)
@@ -163,12 +166,13 @@ useHead({
 async function handleLogin() {
   loginLoading.value = true
   // Save current page as redirect target
-  const route = useRoute()
   if (route.query.redirect) {
-    sessionStorage.setItem('animeframe-redirect-to', route.query.redirect as string)
+    await setRedirectTarget(String(route.query.redirect))
   }
   await login()
-  // login() redirects the browser, so we won't reach here
+  // On the web the browser navigates away; on Android the Custom Tab opens
+  // and this page stays mounted behind it.
+  loginLoading.value = false
 }
 
 async function handleLogout() {
